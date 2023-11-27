@@ -4,8 +4,6 @@
 
 ### Initialization
 - [ ] create all the corresponding tables for those csv files
-see the guide on how many tables are needed
-add all these tables to the database
 
 ### Login
 - [ ] add code that performs a login task
