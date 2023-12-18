@@ -44,8 +44,6 @@ class MemberPendingRequest:
         self.status = 'Pending'
 
 
-# project_manage.py
-
 class DatabaseManager:
     def __init__(self):
         # Initialize the database and tables
