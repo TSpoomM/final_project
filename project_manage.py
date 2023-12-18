@@ -1,253 +1,647 @@
-# import the database module
-from database import Database, persons_table
+# import database module
+from database import Database, CsvReader, Table
 import csv
 import sys
 
 
-class ProjectEvaluation:
+class Person:
     def __init__(self):
-        self.evaluations = []
+        self.person_data = []  # ID, First, Last, Type
 
-    def add_evaluation(self, project_id, eva_id, comments, rate):
-        eva = {
-            "project_id": project_id,
-            "evaluator_id": eva_id,
-            "comments": comments,
-            "rating": rate
-        }
-        self.evaluations.append(eva)
-
-    def get_evaluations_for_project(self, project_id):
-        return [data for data in self.evaluations if data["project_id"] == project_id]
+    def add_person(self, person_id, first_name, last_name, person_type):
+        person_entry = {"ID": person_id, "First": first_name, "Last": last_name, "Type": person_type}
+        self.person_data.append(person_entry)
 
 
-class CSVReader:
-    def __init__(self, file_path):
-        self.file_path = file_path
+class Login:
+    def __init__(self):
+        self.login_data = []  # ID, Username, Password, Role
 
-    def read_csv(self):
-        data = []
-        with open(self.file_path) as f:
-            rows = csv.DictReader(f)
-            for r in rows:
-                data.append(dict(r))
-        return data
+    def add_login(self, person_id, username, password, role):
+        login_entry = {"ID": person_id, "Username": username, "Password": password, "Role": role}
+        self.login_data.append(login_entry)
 
 
-class CSVTable:
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.entries = []
-        self.load_entries()
-        self.evaluations = ProjectEvaluation()
+class AdvisorPendingRequest:
+    def __init__(self, project_id, advisor_id, status='Pending', response=None, response_data=None):
+        self.project_id = project_id
+        self.advisor_id = advisor_id
+        self.response = response
+        self.status = status
+        self.response_data = response_data
 
-    def load_entries(self):
-        csv_reader = CSVReader(self.file_path)
-        self.entries = csv_reader.read_csv()
 
-    def insert_entry(self, entry):
-        self.entries.append(entry)
+class MemberPendingRequest:
+    def __init__(self, project_id, to_be_member, response=None, response_data=None):
+        self.project_id = project_id
+        self.to_be_member = to_be_member
+        self.response = response
+        self.response_data = response_data
 
-    def update_entry(self, key, old_value, new_value):
-        for i in self.entries:
-            if i.get(key) == old_value:
-                i[key] = new_value
+        self.first_name = None
+        self.last_name = None
+        self.member_id = to_be_member
+        self.status = 'Pending'
 
-    def save_to_csv(self):
-        with open(self.file_path, mode='w', newline='') as f:
-            fieldnames = self.entries[0].keys() if self.entries else []
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
 
+# project_manage.py
+
+class DatabaseManager:
+    def __init__(self):
+        # Initialize the database and tables
+        self.database = Database('project_database')
+        self.initialize_tables()
+
+    def initialize_tables(self):
+        # Create tables for admin, lead, member, student, faculty, project, etc.
+        # Define table structures (columns) as needed
+        self.database.create_table('admin', ['ID', 'username', 'password'])
+        self.database.create_table('lead', ['ID', 'username', 'password', 'projects'])
+        self.database.create_table('member', ['ID', 'username', 'password', 'project_details'])
+        # ... (similarly for other roles and entities)
+
+    def update_all_tables(self, table_name, data):
+        # Update data in the specified table
+        self.database.update_table(table_name, data)
+
+
+class User:
+    def __init__(self, user_id, username, password):
+        self.ID = user_id
+        self.username = username
+        self.password = password
+
+
+class Admin(User):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'admin'
+
+    def manage_database(self, database_manager, table_name, data):
+        # Admin can update all tables in the database
+        return database_manager.update_all_tables(table_name, data)
+
+
+class Student(User):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'student'
+        self.invitation_messages = []
+        self.project_details = None
+
+    def accept_invitation(self, member_id):
+        # Read the existing member_request.csv file
+        with open('Member_request.csv', mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the member_id
+        for row in rows:
+            if row['ID'] == member_id and row['status'] == 'Pending':
+                # Update the status to 'Accepted'
+                row['status'] = 'Accepted'
+                print(f"Invitation accepted for member {member_id}.")
+                break
+
+        # Write the updated data back to the member_request.csv file
+        with open('Member_request.csv', mode='w', newline='') as file:
+            fieldnames = ['ID', 'status']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(self.entries)
+            writer.writerows(rows)
 
-    def evaluate(self, project_id, eva_id, comments, rate):
-        self.evaluations.add_evaluation(project_id, eva_id, comments, rate)
+    def deny_invitation(self, member_id):
+        # Read the existing member_request.csv file
+        with open('Member_request.csv', mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
 
-    def get_project_eva(self, project_id):
-        return self.evaluations.get_evaluations_for_project(project_id)
+        # Find the row corresponding to the member_id
+        for row in rows:
+            if row['ID'] == member_id and row['status'] == 'Pending':
+                # Update the status to 'Denied'
+                row['status'] = 'Denied'
+                print(f"Invitation denied for member {member_id}.")
+                break
+
+        # Write the updated data back to the member_request.csv file
+        with open('Member_request.csv', mode='w', newline='') as file:
+            fieldnames = ['ID', 'status']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def modify_project_details(self, project_id, modifying_member, new_details):
+        # Read the existing project CSV file
+        with open("Project.csv", mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ProjectID'] == project_id:
+                # Update project details
+                row['Details'] = new_details
+                row['Status'] = f"Details modified by {modifying_member}"
+                print(f"Project details modified for project {project_id} by {modifying_member}.")
+                break
+
+        # Write the updated data back to the project.csv file
+        with open("Project.csv", mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
 
-class CSVDatabase:
-    def __init__(self, database_name):
-        self.database_name = database_name
-        self.tables = {}
+class Lead(Student):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'lead'
+        self.projects = []
 
-    def create_table(self, table_name, file_path):
-        table = CSVTable(file_path)
-        self.tables[table_name] = table
+    def create_project(self, ProjectID, Title, Lead, Member1, Member2, Advisor, Status):
+        # Logic for creating a new project
+        with open("Project.csv", 'a', newline='') as file:
+            writer = csv.writer(file)
+            project_data = [ProjectID, Title, Lead, Member1, Member2, Advisor, Status]
+            writer.writerow(project_data)
+
+    def find_member(self, member_name):
+        with open('Project.csv', mode='r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+
+            for row in csv_reader:
+                project_id = row['ProjectID']
+                title = row['Title']
+                lead = row['Lead']
+                member1 = row['Member1']
+                member2 = row['Member2']
+                advisor = row['Advisor']
+                status = row['Status']
+
+                # Check if the member is in 'Member1' or 'Member2' columns
+                if member_name in [member1, member2]:
+                    print(f"Member {member_name} found in project {project_id}: {title}")
+                    # You can also print or return other information as needed
+                    return project_id, title, lead, member_name, advisor, status
+
+        print(f"Member {member_name} not found in any projects.")
+        return None
+
+    def send_invitation_to_member(self, project_id, member_to_invite):
+        # Create a MemberPendingRequest instance for the invitation
+        invitation_request = MemberPendingRequest(project_id, member_to_invite)
+
+        # Write the invitation request to the member_request.csv file
+        with open('Member_request.csv', mode='a', newline='') as file:
+            fieldnames = ['project_id', 'to_be_member', 'response', 'response_data', 'first_name', 'last_name',
+                          'member_id', 'status']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+            # Write the header if the file is newly created
+            if file.tell() == 0:
+                writer.writeheader()
+
+            # Write the invitation request data
+            writer.writerow(vars(invitation_request))
+
+    def add_member_to_project(self, project_id, new_member):
+        # Read the existing CSV file
+        with open('Project.csv', mode='r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            rows = list(csv_reader)
+
+        # Find the project in the CSV file
+        for row in rows:
+            if row['ProjectID'] == project_id:
+                # Update the 'Member1' or 'Member2' column with the new member
+                if not row['Member1']:
+                    row['Member1'] = new_member
+                elif not row['Member2']:
+                    row['Member2'] = new_member
+                else:
+                    # Handle the case where both 'Member1' and 'Member2' are already occupied
+                    print(f"Project {project_id} already has two members.")
+
+        # Write the updated data back to the CSV file
+        with open('Project.csv', mode='w', newline='') as csv_file:
+            fieldnames = csv_reader.fieldnames
+            csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+            # Write the header
+            csv_writer.writeheader()
+
+            # Write the updated rows
+            csv_writer.writerows(rows)
+
+    def send_request_to_advisors(self, project_id, advisor_name):
+        # Create an AdvisorPendingRequest instance for the request
+        request_to_advisor = AdvisorPendingRequest(project_id, advisor_name)
+
+        # Write the request to the advisor_request.csv file
+        with open('Advisor_request.csv', mode='a', newline='') as file:
+            fieldnames = ['project_id', 'advisor_id', 'status', 'response', 'response_data']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+            # Write the header if the file is newly created
+            if file.tell() == 0:
+                writer.writeheader()
+
+            # Write the request data
+            writer.writerow(vars(request_to_advisor))
+
+    def submit_final_report(self, project_id, reporting_member):
+        # Read the existing CSV file
+        with open('Project.csv', mode='r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            rows = list(csv_reader)
+
+        # Find the project in the CSV file
+        for row in rows:
+            if row['ProjectID'] == project_id:
+                # Update the 'Status' column with the final report information
+                row['Status'] = f"Final Report Submitted by {reporting_member}"
+
+                print(f"Final report submitted for project {project_id} by {reporting_member}.")
+
+        # Write the updated data back to the CSV file
+        with open('Project.csv', mode='w', newline='') as csv_file:
+            fieldnames = csv_reader.fieldnames
+            csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+            # Write the header
+            csv_writer.writeheader()
+
+            # Write the updated rows
+            csv_writer.writerows(rows)
+
+
+class Member(Student):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'member'
+
+    def modify(self, project_id, modifying_member, new_details):
+        self.modify_project_details(project_id, modifying_member, new_details)
+
+
+class Faculty(User):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'faculty'
+
+    def see_project_requests(self):
+        # Read the advisor_request.csv file
+        with open("Advisor_request.csv", mode='r') as file:
+            reader = csv.DictReader(file)
+
+            # Display project requests
+            print("Project Requests:")
+            for row in reader:
+                print(f"Project ID: {row['ID']}, Status: {row['status']}")
+
+    def deny_advisor_request(self, project_id, denying_advisor):
+        # Read the existing advisor_request.csv file
+        with open("Advisor_request.csv", mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ID'] == project_id and row['status'] == 'Pending':
+                # Update the status to 'Denied'
+                row['status'] = 'Denied by Advisor: ' + denying_advisor
+                print(f"Advisor request denied for project {project_id} by {denying_advisor}.")
+                break
+
+        # Write the updated data back to the advisor_request.csv file
+        with open("Advisor_request.csv", mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def see_all_projects(self):
+        # Read the Project.csv file
+        with open("Project.csv", mode='r') as file:
+            reader = csv.DictReader(file)
+
+            # Display project
+            print("Project: ")
+            for row in reader:
+                print(f"Project ID: {row['ProjectID']}, Title: {row['Title']}, Lead: {row['Lead']}, "
+                      f"Member1: {row['Member1']}, Member2: {row['Member2']}, Advisor: {row['Advisor']}, "
+                      f"Status: {row['status']}")
+
+    def evaluate_project(self, project_id, evaluator, score, feedback):
+        # Read the existing Project.csv file
+        with open('Project.csv', mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ProjectID'] == project_id:
+                # Update the status, evaluator, score, and feedback
+                row['Status'] = f"Evaluated by {evaluator}"
+                row['Evaluator'] = evaluator
+                row['Score'] = score
+                row['Feedback'] = feedback
+                print(f"Project {project_id} evaluated by {evaluator}.")
+                break
+
+        # Write the updated data back to the Project.csv file
+        with open("Project.csv", mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+
+class AdvisingFaculty(Faculty):
+    def __init__(self, user_id, username, password):
+        super().__init__(user_id, username, password)
+        self.role = 'advising_faculty'
+
+    def approve_project(self, project_id, approver):
+        # Read the existing Project.csv file
+        with open('Project.csv', mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ProjectID'] == project_id:
+                # Update the status and approver
+                row['Status'] = f"Approved by {approver}"
+                row['Approver'] = approver
+                print(f"Project {project_id} approved by {approver}.")
+                break
+
+        # Write the updated data back to the Project.csv file
+        with open('Project.csv', mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def see_all_projects_detail(self):
+        self.see_all_projects()
+
+    def accept_advisor_request(self, project_id, accepting_advisor):
+        # Read the existing advisor_request.csv file
+        with open("Advisor_request.csv", mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ID'] == project_id and row['status'] == 'Pending':
+                # Update the status to 'Accepted by Advisor: [accepting_advisor]'
+                row['status'] = f'Accepted by Advisor: {accepting_advisor}'
+                print(f"Advisor request accepted for project {project_id} by {accepting_advisor}.")
+                break
+
+        # Write the updated data back to the advisor_request.csv file
+        with open("Advisor_request.csv", mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def deny_advisor_request(self, project_id, denying_advisor):
+        # Read the existing advisor_request.csv file
+        with open('Advisor_request.csv', mode='r') as file:
+            reader = csv.DictReader(file)
+            rows = list(reader)
+
+        # Find the row corresponding to the project_id
+        for row in rows:
+            if row['ID'] == project_id and row['status'] == 'Pending':
+                # Update the status to 'Denied by Advisor: [denying_advisor]'
+                row['status'] = f'Denied by Advisor: {denying_advisor}'
+                print(f"Advisor request denied for project {project_id} by {denying_advisor}.")
+                break
+
+        # Write the updated data back to the advisor_request.csv file
+        with open('Advisor_request.csv', mode='w', newline='') as file:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
 
 # define a function called initializing
+
 def initializing():
-    # create an object to read all csv files that will serve as a persistent state for this program
-    my_database = Database('my_database')
-
     """
-    create all the corresponding tables for those csv files
-    see the guide on how many tables are needed
-    add all these tables to the database
+        Create all the corresponding tables for those csv files
+        see the guide on how many tables are needed
+        add all these tables to the database.
     """
 
-    # Read the 'persons.csv' file and add a 'persons' table to the database
-    csv_file_path_persons = 'persons.csv'
-    table_name_persons = 'persons'
-    with open(csv_file_path_persons) as f_persons:
-        rows_persons = csv.DictReader(f_persons)
-        columns_persons = rows_persons.fieldnames
+    # database = Database('my_database')  # Instantiate the database
 
-        # Add the 'persons' table to the database
-        my_database.add_table(table_name_persons, columns_persons)
+    persons_data = CsvReader(file_paths=['persons.csv']).read_csv()
+    login_data = CsvReader(file_paths=['login.csv']).read_csv()
 
-        # Get the 'persons' table from the database
-        persons_table = my_database.tables[table_name_persons]
+    # Create the 'persons' table
+    persons_table = Table(table_name='persons', columns=['ID', 'first', 'last', 'type'])
+    for person_entry in persons_data:
+        persons_table.insert(person_entry)
 
-        # Insert data into the 'persons' table
-        for row_persons in rows_persons:
-            entry_persons = [row_persons[column] for column in columns_persons]
-            persons_table.insert(entry_persons)
+    # Create the 'login' table
+    login_table = Table(table_name='login', columns=['ID', 'username', 'password', 'role'])
 
-    # Read the 'login.csv' file and add a 'login' table to the database
-    csv_file_path_login = 'login.csv'
-    table_name_login = 'login'
-    with open(csv_file_path_login) as f_login:
-        rows_login = csv.DictReader(f_login)
-        columns_login = rows_login.fieldnames
+    for login_entry in login_data:
+        login_table.insert(login_entry)
 
-        # Add the 'login' table to the database
-        my_database.add_table(table_name_login, columns_login)
-
-        # Get the 'login' table from the database
-        login_table = my_database.tables[table_name_login]
-
-        # Insert data into the 'login' table
-        for row_login in rows_login:
-            entry_login = [row_login[column] for column in columns_login]
-            login_table.insert(entry_login)
-
-    return my_database
+    return persons_table, login_table
 
 
-# define a function called login
-def login(database):
-    """
-    add code that performs a login task
-    ask a user for a username and password
-    returns [ID, role] if valid
-    """
+def login(username, password, login_file='login.csv', max_password_attempts=3):
+    # Read the login.csv file
+    with open(login_file, mode='r') as file:
+        reader = csv.DictReader(file)
 
-    # Check the username
-    global name, password
+        password_attempts = 0
 
-    username_flag = True
-    password_flag = True
-    count = 1
+        # Check each row for a matching username and password
+        for row in reader:
+            if row['username'] == username:
+                # Username is correct, check password
+                while password_attempts < max_password_attempts:
+                    if row['password'] == password:
+                        return row['role']
+                    else:
+                        password_attempts += 1
+                        print(f"-----------------------------------------")
+                        print(f"Incorrect password. {max_password_attempts - password_attempts} attempts remaining.")
+                        print(f"-----------------------------------------")
+                        password = input("Enter your password: ")
 
-    while username_flag:
+                # Max password attempts reached
+                print("Max password attempts reached. Please try again later.")
+                return None
 
-        name = input("Enter your username: ")
-
-        for entry in database.tables['login'].data:
-
-            if entry['username'] == name:
-                username_flag = False
-                break
-
-        if username_flag:
-            print(f"--------------------------------------")
-            print("Incorrect name.")
-            print(f"--------------------------------------")
-
-    while password_flag:
-
-        password = input("Enter your password: ")
-
-        if count >= 3:
-            print("BYE BYE")
-            exit()
-
-        for entry in database.tables['login'].data:
-            if password == entry['password']:
-                password = False
-                return [entry['ID'], entry['role']]
-
-        count += 1
-        print(f"--------------------------------------")
-        print(f"Invalid password \nPlease try again {4 - count}")
-        print(f"--------------------------------------")
+        # Username not found
+        print("Incorrect username. Please try again.")
+        return None
 
 
 # define a function called exit
 def exit_program():
     """
-    write out all the tables that have been modified to the corresponding csv files
-    By now, you know how to read in a csv file and transform it into a list of dictionaries.
-    For this project, you also need to know how to do the reverse, i.e.,
-    writing out to a csv file given a list of dictionaries.
-    See the link below for a tutorial on how to do this:
-    https://www.pythonforbeginners.com/basics/list-of-dictionaries-to-csv-in-python
+        Exit the Program.
     """
-
     sys.exit()
 
 
 # make calls to the initializing and login functions defined above
-my_db = initializing()
-val = login(my_db)
 
-""" 
-based on the return value for login, activate the code 
-that performs activities according to the role defined for that person_id 
-"""
-if val and val[1] == 'admin':
-    # see and do admin related activities
-    print("Admin activities")
-    persons_table.show_data()
-    print("Admin can update all the tables there")
+persons_table, login_table = initializing()
+max_username_attempts = 3
+max_password_attempts = 3
+real_role = []
+user_id = []
+username = []
+password = []
+project_id = []
 
-elif val and val[1] == 'student':
-    # see and do student related activities
-    print("student activities")
-    print("1. See an invitational message from the lead \n"
-          "2. Accept or deny the invitation \n"
-          "3. See and modify his project details")
+for _ in range(max_username_attempts):
+    username_input = input("Enter your username: ")
+    password_input = input("Enter your password: ")
 
-elif val and val[1] == 'member':
-    # see and do member related activities
-    print("member activities")
-    print("See and modify his project details")
+    username.append(username_input)
+    password.append(password_input)
 
-elif val and val[1] == 'lead':
-    # see and do lead related activities
-    print("lead activities")
-    print("Create a project \n"
-          "Find members \n"
-          "Send invitational messages to potential members \n"
-          "Add members to the project and form a group \n"
-          "See and modify his own project details \n"
-          "Send request messages to potential advisors \n"
-          "Submit the final project report \n")
+    role = login(username_input, password_input, max_password_attempts=max_password_attempts)
+    roles = role.lower()
 
-elif val and val[1] == 'faculty':
-    # see and do faculty related activities
-    print("faculty activities")
-    print("See request to be a supervisor \n"
-          "Send response denying to serve as an advisor \n"
-          "See details of all the project \n"
-          "Evaluate projects (this is the missing step that you will explain in"
-          " your proposal; see details in the tasks below)")
-
-elif val and val[1] == 'advisor':
-    # see and do advisor related activities
-    print("advisor activities")
-    print("See request to be a supervisor \n"
-          "Send accept response (for projects eventually serving as an advisor) \n"
-          "Send deny response (for projects not eventually serving as an advisor) \n"
-          "See details of all the project \n"
-          "Evaluate projects (this is the missing step that you will explain in your "
-          "proposal; see details in the tasks below)Approve the project")
+    if roles:
+        print(f"Login successful! You are a {roles}.")
+        real_role = str(roles)
+        break
+    else:
+        print("Login failed. Please try again.")
+        print(f"-----------------------------------------")
 else:
-    print("Invalid role. Please check your user data.")
+    print("Max username attempts reached. Please try again later.")
 
+with open("login.csv", mode='r') as file:
+    reader = csv.DictReader(file)
+    rowww = list(reader)
+
+    for roww in rowww:
+        if username[-1] == roww['username']:
+            user_id.append(roww['ID'])
+
+with open("Project.csv", mode='r') as file:
+    reader = csv.DictReader(file)
+    rows = list(reader)
+
+    for row in rows:
+        if user_id[-1] == (row['Member1'] or row['Member2']):
+            project_id.append(row['ProjectID'])
+
+while True:
+
+    if real_role == 'admin':
+        # see and do admin related activities
+        print("Admin can manage_database")
+        choose = input("Manage or Exit ? [Y/N]: ").upper()
+        while choose == 'y':
+            admin = Admin(user_id, username[-1], password[-1])
+            table_name = input("Table name to update? : ")
+            new_data = input("Data to edit? : ")
+            manage = admin.manage_database(DatabaseManager, table_name, new_data)
+            print("Your database has been updated.")
+            choose = input("Manage or Exit ? [Y/N]: ").upper()
+
+        print("Exit the program.")
+        exit_program()
+
+    elif real_role == 'student':
+        print("Student can Accept, Deny the invitation and Modify your project.")
+
+        choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+        student = Student(user_id, username[0], password[0])
+
+        while True:
+            if choose2 == 'A':
+                accept = student.accept_invitation(user_id)
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+            elif choose2 == 'D':
+                deny = student.deny_invitation(user_id)
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+            elif choose2 == 'M':
+                new_data2 = input('Detail to modify? : ')
+                modify = student.modify_project_details(project_id[-1], user_id[-1], new_data2)
+                print("Your database has been updated.")
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+            else:
+                print("Exit the program.")
+                exit_program()
+
+        # see and do student related activities
+
+    elif real_role == 'member':
+        # see and do member related activities
+        member = Member(user_id[-1], username[-1], password[-1])
+        print("Member can Modify the project details.")
+        choose3 = input('Modify[M] or Exit[E]? : ').upper()
+        while choose3 == 'M':
+            new_data3 = input('Detail to modify? : ')
+            modify2 = member.modify(project_id[-1], user_id[-1], new_data3)
+            print("Your database has been updated.")
+            choose3 = input('Modify[M] or Exit[E]? : ').upper()
+
+        print("Exit the program.")
+        exit_program()
+
+    elif real_role == 'lead':
+        # see and do lead related activities
+        lead = Lead(user_id[-1], username[-1], password[-1])
+        print('lead can Create Project, Find member, Send invite to member, '
+              'Send request to advisor, Add member, Submit project')
+        choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                        'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+        while True:
+            if choose4 == 'C':
+                # ProjectID, Title, Lead, Member1, Member2, Advisor, Status
+                print("Create Project : ")
+                projectID = input("ProjectID : ")
+                title = input("Title : ")
+                lead2 = input("Lead : ")
+                member1 = input("Member1 : ")
+                member2 = input("Member2 : ")
+                advisor = input("Advisor : ")
+                status = input("Status : ")
+                create = lead.create_project(projectID, title, lead2, member1, member2, advisor, status)
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+            elif choose4 == 'F':
+                member_name = input("Enter the name : ")
+                find = lead.find_member(member_name)
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+            elif choose4 == 'I':
+                print("Send invite to member : ")
+                mem = input("Enter member name : ")
+                invite = lead.send_invitation_to_member(project_id[-1], mem)
+                print("Member has been invited.")
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+
+    elif real_role == 'faculty':
+        # see and do faculty related activities
+        pass
+    elif real_role == 'advisor':
+        # see and do advisor related activities
+        pass
+
+# pr = Project()
+# show = pr.load_projects_from_csv()
 # once everything is done, make a call to the exit function
 exit_program()
