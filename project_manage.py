@@ -551,37 +551,56 @@ while True:
         # see and do admin related activities
         print("Admin can manage_database")
         choose = input("Manage or Exit ? [Y/N]: ").upper()
+
         while choose == 'y':
+
+            print(f"---------------------------------------------------------------")
+            print('Manage : ')
             admin = Admin(user_id, username[-1], password[-1])
             table_name = input("Table name to update? : ")
             new_data = input("Data to edit? : ")
             manage = admin.manage_database(DatabaseManager, table_name, new_data)
             print("Your database has been updated.")
+            print(f"---------------------------------------------------------------")
             choose = input("Manage or Exit ? [Y/N]: ").upper()
 
         print("Exit the program.")
+        print(f"---------------------------------------------------------------")
         exit_program()
 
     elif real_role == 'student':
+        print(f"---------------------------------------------------------------")
         print("Student can Accept, Deny the invitation and Modify your project.")
-
-        choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+        choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[.]: ").upper()
         student = Student(user_id, username[0], password[0])
 
         while True:
+
             if choose2 == 'A':
-                accept = student.accept_invitation(user_id)
-                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+                print("Accept invitation : ")
+                student.accept_invitation(user_id)
+                print("Invitation had been accept.")
+                print(f"---------------------------------------------------------------")
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[.]: ").upper()
+
             elif choose2 == 'D':
-                deny = student.deny_invitation(user_id)
-                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+                print("Deny invitation : ")
+                student.deny_invitation(user_id)
+                print("Invitation had been deny.")
+                print(f"---------------------------------------------------------------")
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[.]: ").upper()
+
             elif choose2 == 'M':
+                print("Modify_project_details : ")
                 new_data2 = input('Detail to modify? : ')
-                modify = student.modify_project_details(project_id[-1], user_id[-1], new_data2)
+                student.modify_project_details(project_id[-1], user_id[-1], new_data2)
                 print("Your database has been updated.")
-                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[E]: ").upper()
+                print(f"---------------------------------------------------------------")
+                choose2 = input("Accept[A] or Deny[D] or Modify[M] or Exit[.]: ").upper()
+
             else:
                 print("Exit the program.")
+                print(f"---------------------------------------------------------------")
                 exit_program()
 
         # see and do student related activities
@@ -589,25 +608,34 @@ while True:
     elif real_role == 'member':
         # see and do member related activities
         member = Member(user_id[-1], username[-1], password[-1])
+        print(f"---------------------------------------------------------------")
         print("Member can Modify the project details.")
-        choose3 = input('Modify[M] or Exit[E]? : ').upper()
+        choose3 = input('Modify[M] or Exit[.]? : ').upper()
+
         while choose3 == 'M':
+
+            print("Modify : ")
             new_data3 = input('Detail to modify? : ')
-            modify2 = member.modify(project_id[-1], user_id[-1], new_data3)
+            member.modify(project_id[-1], user_id[-1], new_data3)
             print("Your database has been updated.")
-            choose3 = input('Modify[M] or Exit[E]? : ').upper()
+            print(f"---------------------------------------------------------------")
+            choose3 = input('Modify[M] or Exit[.]? : ').upper()
 
         print("Exit the program.")
+        print(f"---------------------------------------------------------------")
         exit_program()
 
     elif real_role == 'lead':
         # see and do lead related activities
         lead = Lead(user_id[-1], username[-1], password[-1])
+        print(f"------------------------------------------------------------"
+              f"--------------------------------------------------")
         print('lead can Create Project, Find member, Send invite to member, '
               'Send request to advisor, Add member, Submit project')
         choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
-                        'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+                        'Send request to advisor[R], Add member[A], Submit project[S]? or Exit[.] : ').upper()
         while True:
+
             if choose4 == 'C':
                 # ProjectID, Title, Lead, Member1, Member2, Advisor, Status
                 print("Create Project : ")
@@ -618,30 +646,157 @@ while True:
                 member2 = input("Member2 : ")
                 advisor = input("Advisor : ")
                 status = input("Status : ")
-                create = lead.create_project(projectID, title, lead2, member1, member2, advisor, status)
+                lead.create_project(projectID, title, lead2, member1, member2, advisor, status)
+                print("Project has been create.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
                 choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
-                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
             elif choose4 == 'F':
+                print("Find member : ")
                 member_name = input("Enter the name : ")
                 find = lead.find_member(member_name)
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
                 choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
-                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
             elif choose4 == 'I':
                 print("Send invite to member : ")
                 mem = input("Enter member name : ")
-                invite = lead.send_invitation_to_member(project_id[-1], mem)
+                lead.send_invitation_to_member(project_id[-1], mem)
                 print("Member has been invited.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
                 choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
-                                'Send request to advisor[R], Add member[A], Submit project[S]? : ').upper()
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
+            elif choose4 == 'R':
+                print("Send request to advisor : ")
+                advisor_name = input("Enter advisor name : ")
+                lead.send_request_to_advisors(project_id[-1], advisor_name)
+                print("You has been request to advisor.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
+            elif choose4 == 'A':
+                print("Add member : ")
+                mem2 = input("Enter member name : ")
+                lead.add_member_to_project(project_id[-1], mem2)
+                print("Member has been add.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
+            elif choose4 == 'S':
+                print("Submit project : ")
+                lead.submit_final_report(project_id[-1], username[-1])
+                print("Project has been submitted.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose4 = input('Create Project[C], Find member[F], Send invite to member[I], '
+                                'Send request to advisor[R], Add member[A], Submit project[S] or Exit[.]? : ').upper()
+
+            else:
+                print("Exit the program.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                exit_program()
 
     elif real_role == 'faculty':
-        # see and do faculty related activities
-        pass
+        faculty = Faculty(user_id[-1], username[-1], password[-1])
+        print(f"------------------------------------------------------------"
+              f"--------------------------------------------------")
+        print("Faculty can See_project_requests, Deny_advisor_request, See_all_projects, Evaluate_project.")
+        choose5 = input("See_project_requests[R], Deny_advisor_request[D], "
+                        "See_all_projects[S], Evaluate_project[E] or Exit[.]? : ")
+        while True:
+
+            if choose5 == 'R':
+                print('See_project_requests : ')
+                faculty.see_project_requests()
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose5 = input("See_project_requests[R], Deny_advisor_request[D], "
+                                "See_all_projects[S], Evaluate_project[E] or Exit[.]? : ")
+
+            elif choose5 == 'D':
+                print("Deny advisor request : ")
+                faculty.deny_advisor_request(project_id[-1], username[-1])
+                print("Advisor has been deny.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose5 = input("See_project_requests[R], Deny_advisor_request[D], "
+                                "See_all_projects[S], Evaluate_project[E] or Exit[.]? : ")
+
+            elif choose5 == 'S':
+                print("See all projects : ")
+                faculty.see_all_projects()
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose5 = input("See_project_requests[R], Deny_advisor_request[D], "
+                                "See_all_projects[S], Evaluate_project[E] or Exit[.]? : ")
+
+            elif choose5 == 'E':
+                print("Evaluate_project : ")
+                score = input("Enter score : ")
+                feedback = input("Enter feedback : ")
+                faculty.evaluate_project(project_id[-1], username[-1], score, feedback)
+                print("Project has been evaluate.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose5 = input("See_project_requests[R], Deny_advisor_request[D], "
+                                "See_all_projects[S], Evaluate_project[E] or Exit[.]? : ")
+
+            else:
+                print("Exit the program.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                exit_program()
+
     elif real_role == 'advisor':
         # see and do advisor related activities
-        pass
+        advisor = AdvisingFaculty(user_id[-1], username[-1], password[-1])
+        print(f"------------------------------------------------------------"
+              f"--------------------------------------------------")
+        print("Advisor can Approve_project, See_all_projects_detail, Accept_advisor_request, Deny_advisor_request.")
+        choose6 = input("Approve_project[A], See_all_projects_detail[S], "
+                        "Accept_advisor_request[R], Deny_advisor_request[D]. or Exit[.]? : ")
 
-# pr = Project()
-# show = pr.load_projects_from_csv()
-# once everything is done, make a call to the exit function
-exit_program()
+        while True:
+
+            if choose6 == 'A':
+                print("Approve project.")
+                advisor.approve_project(project_id[-1], username[-1])
+                print('Project has been approve.')
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose6 = input("Approve_project[A], See_all_projects_detail[S], "
+                                "Accept_advisor_request[R], Deny_advisor_request[D]. or Exit[.]? : ")
+
+            elif choose6 == 'S':
+                print('See all projects detail.')
+                advisor.see_all_projects_detail()
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose6 = input("Approve_project[A], See_all_projects_detail[S], "
+                                "Accept_advisor_request[R], Deny_advisor_request[D]. or Exit[.]? : ")
+
+            elif choose6 == 'R':
+                print("Accept advisor request.")
+                advisor.accept_advisor_request(project_id, username)
+                print("Advisor request has been accept.")
+                print(f"------------------------------------------------------------"
+                      f"--------------------------------------------------")
+                choose6 = input("Approve_project[A], See_all_projects_detail[S], "
+                                "Accept_advisor_request[R], Deny_advisor_request[D]. or Exit[.]? : ")
+
+    else:
+        print("Exit the program.")
+        print(f"------------------------------------------------------------"
+              f"--------------------------------------------------")
+        exit_program()
