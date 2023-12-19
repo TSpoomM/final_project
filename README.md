@@ -3,8 +3,8 @@
 ## Project Files
   - database.py (Update)
   - project_manage.py (Update)
-  - persons.csv(Update)
-  - login.csv(Update)
+  - persons.csv
+  - login.csv
   - project.csv (Update)
   - member_pending_request.csv (Update)
   - advisor_pending_request.csv (Update)
